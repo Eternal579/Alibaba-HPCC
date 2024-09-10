@@ -207,7 +207,6 @@ uint32_t RdmaHw::GetNicIdxOfQp(Ptr<RdmaQueuePair> qp){
 	if (v.size() > 0){
 		return v[qp->GetHash() % v.size()];
 	}else{
-		std::cout << "qp->sip = " << qp->sip.Get() << ", qp->dip = " << qp->dip.Get() << "\n";
 		NS_ASSERT_MSG(false, "We assume at least one NIC is alive");
 	}
 }

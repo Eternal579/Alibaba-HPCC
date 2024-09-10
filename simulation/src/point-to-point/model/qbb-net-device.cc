@@ -450,7 +450,6 @@ namespace ns3 {
 		newp->AddHeader(seqh);
 		Ipv4Header ipv4h;	// Prepare IPv4 header
 		ipv4h.SetDestination(Ipv4Address(ch.sip));
-		//ipv4h.SetDestination(Ipv4Address("255.255.255.255"));
 		//Source为当前设备
 		ipv4h.SetSource(m_node->GetObject<Ipv4>()->GetAddress(m_ifIndex, 0).GetLocal());
 		ipv4h.SetProtocol(0xFF); //ack=0xFC nack=0xFD
