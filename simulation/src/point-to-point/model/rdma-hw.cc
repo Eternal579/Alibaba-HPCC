@@ -358,7 +358,7 @@ int RdmaHw::ReceiveCnp(Ptr<Packet> p, CustomHeader &ch){
 	uint16_t udpport = ch.cnp.fid; // corresponds to the sport
 	uint8_t ecnbits = ch.cnp.ecnBits;
 	uint16_t qfb = ch.cnp.qfb;
-	uint16_t total = ch.cnp.total;
+	uint16_t total = ch.cnp.total;Receive
 
 	uint32_t i;
 	// get qp
