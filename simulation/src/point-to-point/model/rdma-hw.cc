@@ -345,7 +345,8 @@ int RdmaHw::ReceiveCnp(Ptr<Packet> p, CustomHeader &ch){
 	std::cout << "CNP received at " << m_node->GetId() << " from " << ch.sip << " port " << ch.udp.dport << std::endl;
 	uint16_t qIndex = ch.ack.pg;
 	uint16_t port = ch.ack.dport;
-	Ptr<RdmaQueuePair> qp = GetQp(ch.sip, port, qIndex);
+	uint32_t seq = ch.ack.seq;
+	Ptr<RdmaQueuePair> qp = GetQp(ch.sip, 10000, 3);
 	if (qp == NULL){
 		std::cout << "ERROR: " << "node:" << m_node->GetId()  << " CNP NIC cannot find the flow\n";
 		return 0;

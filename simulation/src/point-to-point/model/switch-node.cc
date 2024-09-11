@@ -236,7 +236,7 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 				p->PeekHeader(ch);
 				//终端输出流的信息
 				std::cout << "ECN sent from " << m_devices[ifIndex]->GetNode()->GetId() << " to " << m_devices[inDev]->GetNode()->GetId() << std::endl;
-				if(ch.GetIpv4EcnBits()==0){ // UDP
+				if(ch.GetIpv4EcnBits()==0){
 					Ipv4Header h;
 					PppHeader ppp;
 					p->RemoveHeader(ppp);

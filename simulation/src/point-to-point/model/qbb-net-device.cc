@@ -444,20 +444,20 @@ namespace ns3 {
 		seqh.SetSport(ch.udp.dport);
 		seqh.SetDport(ch.udp.sport);
 		seqh.SetIntHeader(ch.udp.ih);
-		//控制台输出pg、dport
-		std::cout << "pg: " << ch.udp.pg << " dport: " << ch.udp.dport << std::endl;
+		seqh.SetSeq(ch.dip);
+
 		Ptr<Packet> newp = Create<Packet>(std::max(60-14-20-(int)seqh.GetSerializedSize(), 0));
 		newp->AddHeader(seqh);
 		Ipv4Header ipv4h;	// Prepare IPv4 header
 		ipv4h.SetDestination(Ipv4Address(ch.sip));
 		//Source为当前设备
-		ipv4h.SetSource(m_node->GetObject<Ipv4>()->GetAddress(m_ifIndex, 0).GetLocal());
+		//ipv4h.SetSource(m_node->GetObject<Ipv4>()->GetAddress(m_ifIndex, 0).GetLocal());
+		ipv4h.SetSource(Ipv4Address(ch.dip));
 		ipv4h.SetProtocol(0xFF); //ack=0xFC nack=0xFD
 		ipv4h.SetTtl(64);
 		ipv4h.SetPayloadSize(newp->GetSize());
 		ipv4h.SetIdentification(UniformVariable(0, 65536).GetValue());
 		//控制台输出ipv4h的信息
-		std::cout << "ipv4h: " << ipv4h.GetDestination() << " " << ipv4h.GetSource() << " " << ipv4h.GetProtocol() << " " << ipv4h.GetTtl() << " " << ipv4h.GetPayloadSize() << " " << ipv4h.GetIdentification() << std::endl;
 		newp->AddHeader(ipv4h);
 		AddHeader(newp, 0x800);	// Attach PPP header
 		// send
