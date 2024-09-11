@@ -439,12 +439,11 @@ namespace ns3 {
 	void QbbNetDevice::SendCnp(Ptr<Packet> p, CustomHeader &ch){
 		//发送CNP
 		//新建包，设置l3Prot为0xFF，设置sip,dport,qIndex
-		qbbHeader seqh;
+		CnHeader seqh;
 		seqh.SetPG(ch.udp.pg);
 		seqh.SetSport(ch.udp.dport);
 		seqh.SetDport(ch.udp.sport);
-		seqh.SetIntHeader(ch.udp.ih);
-		seqh.SetSeq(ch.dip);
+		std::cout << "CNP sent from " << m_node->GetId() << " to " << ch.sip << " port " << seqh.GetDport() << " pg "<< seqh.GetPG()<< std::endl;
 
 		Ptr<Packet> newp = Create<Packet>(std::max(60-14-20-(int)seqh.GetSerializedSize(), 0));
 		newp->AddHeader(seqh);
@@ -465,7 +464,7 @@ namespace ns3 {
 		newp->PeekHeader(ch2);
 		SwitchSend(0, newp, ch2);
 		//终端打印CNP
-		std::cout << "CNP sent from " << m_node->GetId() << " to " << ch.sip << " port " << ch.udp.dport << std::endl;
+		//std::cout << "CNP sent from " << m_node->GetId() << " to " << ch.sip << " port " << ch.udp.dport << std::endl;
 	}
 	bool
 		QbbNetDevice::Attach(Ptr<QbbChannel> ch)

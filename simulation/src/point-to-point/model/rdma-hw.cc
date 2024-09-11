@@ -342,13 +342,11 @@ int RdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch){
 
 int RdmaHw::ReceiveCnp(Ptr<Packet> p, CustomHeader &ch){
 	//终端输出CNP
-	std::cout << "CNP received at " << m_node->GetId() << " from " << ch.sip << " port " << ch.udp.dport << std::endl;
-	uint16_t qIndex = ch.ack.pg;
-	uint16_t port = ch.ack.dport;
-	uint32_t seq = ch.ack.seq;
-	Ptr<RdmaQueuePair> qp = GetQp(ch.sip, 10000, 3);
+	uint16_t qIndex = ch.cnp.pg;
+	uint16_t port = ch.cnp.dport;
+	Ptr<RdmaQueuePair> qp = GetQp(ch.sip, port, qIndex);
 	if (qp == NULL){
-		std::cout << "ERROR: " << "node:" << m_node->GetId()  << " CNP NIC cannot find the flow\n";
+		std::cout << "ERROR: " << "node:" << m_node->GetId()  << " CNP NIC cannot find the flow "<< ch.sip << ' ' << port << ' ' << qIndex << std::endl;
 		return 0;
 	}
 	cnp_received_mlx(qp);
