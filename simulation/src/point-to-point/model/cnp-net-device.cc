@@ -318,7 +318,7 @@ namespace ns3 {
 							if(cnp.first == 0){
 								cnp.first = ch.seq;
 								uint64_t bytesInQueue=m_queue->GetNBytes(cnp.qIndex);
-								cnp.delay = Time.FromInteger((Time.ToInteger(Simulator::Now(),NS)+bytesInQueue*80),NS);
+								cnp.delay = Time.FromInteger((Time.ToInteger(Simulator::Now(),NS)+bytesInQueue*80*cnp.n),NS);
 								cnp.n--;
 								//p重新入队
 								m_queue->Enqueue(p,ch.udp.pg);
