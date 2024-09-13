@@ -46,7 +46,7 @@ def read_and_classify(file_path):
             # print(src_third_field)
             # print(dst_third_field)
 
-            if (src_third_field < 64 and dst_third_field < 64) or (src_third_field > 63 and dst_third_field > 63):
+            if (src_third_field < 32 and dst_third_field < 32) or (src_third_field > 31 and dst_third_field > 31):
                 intra_ratio_sum += ratio
                 intra_flow_cnt += 1
                 intra_dc_flow.append(line.strip())

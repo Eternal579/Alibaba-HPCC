@@ -40,7 +40,7 @@
 #include "ns3/flow-id-tag.h"
 #include "ns3/qbb-header.h"
 #include "ns3/error-model.h"
-#include "ns3/cn-header.h"
+#include "cn-header.h"
 #include "ns3/ppp-header.h"
 #include "ns3/udp-header.h"
 #include "ns3/seq-ts-header.h"
@@ -316,6 +316,8 @@ namespace ns3 {
 				packet->RemoveHeader(h);
 				FlowIdTag t;
 				uint32_t qIndex = m_queue->GetLastQueue();
+				CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
+				packet->PeekHeader(ch);
 				if (qIndex == 0){//this is a pause or cnp, send it immediately!
 					m_node->SwitchNotifyDequeue(m_ifIndex, qIndex, p);
 					p->RemovePacketTag(t);
@@ -440,6 +442,7 @@ namespace ns3 {
 		//发送CNP
 		//新建包，设置l3Prot为0xFF，设置sip,dport,qIndex
 		CnHeader seqh;
+		if(ch.udp.sport==100)return;
 		seqh.SetPG(ch.udp.pg);
 		seqh.SetSport(ch.udp.dport);
 		seqh.SetDport(ch.udp.sport);
@@ -452,7 +455,7 @@ namespace ns3 {
 		//Source为当前设备
 		//ipv4h.SetSource(m_node->GetObject<Ipv4>()->GetAddress(m_ifIndex, 0).GetLocal());
 		ipv4h.SetSource(Ipv4Address(ch.dip));
-		ipv4h.SetProtocol(0xFF); //ack=0xFC nack=0xFD
+		ipv4h.SetProtocol(0xFF); //ack=0xFC nack=0xFD cdn=0xFF
 		ipv4h.SetTtl(64);
 		ipv4h.SetPayloadSize(newp->GetSize());
 		ipv4h.SetIdentification(UniformVariable(0, 65536).GetValue());
@@ -462,9 +465,10 @@ namespace ns3 {
 		// send
 		CustomHeader ch2(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
 		newp->PeekHeader(ch2);
+		//std::cout << "ch2 " << ch2.cnp.dport << std::endl;
+	
 		SwitchSend(0, newp, ch2);
 		//终端打印CNP
-		//std::cout << "CNP sent from " << m_node->GetId() << " to " << ch.sip << " port " << ch.udp.dport << std::endl;
 	}
 	bool
 		QbbNetDevice::Attach(Ptr<QbbChannel> ch)

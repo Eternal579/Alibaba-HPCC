@@ -248,6 +248,11 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 					device->SendCnp(p, ch);
 				}
 			}
+			
+				// CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
+				// p->PeekHeader(ch);
+				// std::cout << " dport " << ch.cnp.dport<<std::endl;
+			
 		}
 		//CheckAndSendPfc(inDev, qIndex);
 		CheckAndSendResume(inDev, qIndex);
