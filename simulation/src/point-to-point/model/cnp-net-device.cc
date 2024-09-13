@@ -198,6 +198,7 @@ namespace ns3 {
 			}
 			return;
 		}else{   //switch, doesn't care about qcn, just send
+			// cnp-net-device便是Themis中的External Switch，在收到CNP后会对target flow做一个减速
 			p = m_queue->DequeueRR(m_paused);		//this is round-robin
 			if (p != 0){
 				//检查p是否符合m_cnp_handler中的条件，如果符合则更新seq，并放到队尾
@@ -205,6 +206,7 @@ namespace ns3 {
 				ch.getInt = 1;
 				p->PeekHeader(ch);
 				for(auto &cnp : m_cnp_handler){
+					// CNP_Handler这个类的port指的是
 					if (cnp.port == ch.udp.sport && cnp.sip == ch.dip && cnp.qIndex == ch.udp.pg){
                         if(!cnp.finished){
 							//第一个包第一次
@@ -287,9 +289,10 @@ namespace ns3 {
 		return;
 	}
 
+int cnt = 0;
 	void cnpNetDevice::ReceiveCnp(Ptr<Packet> p, CustomHeader &ch) {
 		uint16_t qIndex = ch.ack.pg;
-		uint16_t port = ch.ack.dport;
+		uint16_t port = ch.ack.dport; // ns3中是使用ack打标记来模拟CNP包的，所以ack.dport就是cnp想要作用的发送端端口号
 		uint16_t sip = ch.sip;
 		//在m_cnp_handler中查
 		for (auto &cnp : m_cnp_handler){
@@ -305,7 +308,9 @@ namespace ns3 {
 		cnp.qIndex = qIndex;
 		cnp.port = port;
 		cnp.sip = sip;
+		cnt++; std::cout << "cnt = " << cnt << "\n";
 		m_cnp_handler.push_back(cnp);
+
 		return;
 	}
 
@@ -376,6 +381,7 @@ namespace ns3 {
 		m_macTxTrace(packet);
 		m_traceEnqueue(packet, qIndex);
 		m_queue->Enqueue(packet, qIndex);
+		std::cout << "cnpNetDevice::SwitchSend\n";
 		DequeueAndTransmit();
 		return true;
 	}
@@ -405,7 +411,7 @@ namespace ns3 {
 		seqh.SetPG(ch.udp.pg);
 		seqh.SetSport(ch.udp.dport);
 		seqh.SetDport(ch.udp.sport);
-		std::cout << "CNP sent from " << m_node->GetId() << " to " << ch.sip << " port " << seqh.GetDport() << " pg "<< seqh.GetPG()<< std::endl;
+		//std::cout << "CNP sent from " << m_node->GetId() << " to " << ch.sip << " port " << seqh.GetDport() << " pg "<< seqh.GetPG()<< std::endl;
 
 		Ptr<Packet> newp = Create<Packet>(std::max(60-14-20-(int)seqh.GetSerializedSize(), 0));
 		newp->AddHeader(seqh);

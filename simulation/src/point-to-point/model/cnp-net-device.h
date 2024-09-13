@@ -54,7 +54,7 @@ class cnpNetDevice : public QbbNetDevice
     uint32_t first;//第一个序列号
     uint32_t n;//需要resubmit n遍
     Time delay;//第一个包resubmit带来的延迟
-    bool finished;
+    bool finished;// n次resubmit是否完成
     CNP_Handler(){
       rec_time = Time(0);
       delay = Time(0);

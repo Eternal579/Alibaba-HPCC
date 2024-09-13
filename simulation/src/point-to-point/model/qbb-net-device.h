@@ -69,6 +69,30 @@ public:
  */
 class QbbNetDevice : public PointToPointNetDevice 
 {
+  class CNP_Handler{
+  public:
+  
+
+    Time rec_time;//最后一次接到CNP的时间
+    uint16_t qIndex;
+    uint16_t port;
+    uint16_t sip;
+    uint32_t first;//第一个序列号
+    uint32_t n;//需要resubmit n遍
+    Time delay;//第一个包resubmit带来的延迟
+    bool finished;// n次resubmit是否完成
+    CNP_Handler(){
+      rec_time = Time(0);
+      delay = Time(0);
+      qIndex = 0;
+      port = 0;
+      sip = 0;
+      first = 0;
+      n = 1;
+      finished = false;
+    }
+  };
+  
 public:
   static const uint32_t qCnt = 8;	// Number of queues/priorities used
 
@@ -131,6 +155,9 @@ public:
 	TracedCallback<Ptr<const Packet>, uint32_t> m_traceDequeue;
 	TracedCallback<Ptr<const Packet>, uint32_t> m_traceDrop;
 	TracedCallback<uint32_t> m_tracePfc; // 0: resume, 1: pause
+
+  std::vector<CNP_Handler> m_cnp_handler;
+  bool enable_themis;
 protected:
 
 	//Ptr<Node> m_node;
