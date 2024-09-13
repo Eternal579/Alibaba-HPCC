@@ -7,7 +7,7 @@
 #include "ns3/uinteger.h"
 #include "ns3/double.h"
 #include "switch-node.h"
-#include "qbb-net-device.h"
+#include "cnp-net-device.h"
 #include "qbb-header.h"
 #include "ppp-header.h"
 #include "ns3/int-header.h"
@@ -91,14 +91,14 @@ int SwitchNode::GetOutDev(Ptr<const Packet> p, CustomHeader &ch){
 }
 
 void SwitchNode::CheckAndSendPfc(uint32_t inDev, uint32_t qIndex){
-	Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(m_devices[inDev]);
+	Ptr<cnpNetDevice> device = DynamicCast<cnpNetDevice>(m_devices[inDev]);
 	if (m_mmu->CheckShouldPause(inDev, qIndex)){
 		device->SendPfc(qIndex, 0);
 		m_mmu->SetPause(inDev, qIndex);
 	}
 }
 void SwitchNode::CheckAndSendResume(uint32_t inDev, uint32_t qIndex){
-	Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(m_devices[inDev]);
+	Ptr<cnpNetDevice> device = DynamicCast<cnpNetDevice>(m_devices[inDev]);
 	if (m_mmu->CheckShouldResume(inDev, qIndex)){
 		device->SendPfc(qIndex, 1);
 		m_mmu->SetResume(inDev, qIndex);
@@ -213,7 +213,7 @@ void SwitchNode::CheckAndSendCnp(uint32_t ifIndex, uint32_t qIndex, Ptr<Packet> 
 					h.SetEcn((Ipv4Header::EcnType)0x03);
 					p->AddHeader(h);
 					p->AddHeader(ppp);
-					Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(m_devices[inDev]);
+					Ptr<cnpNetDevice> device = DynamicCast<cnpNetDevice>(m_devices[inDev]);
 					device->SendCnp(p, ch);
 				}
 			}
@@ -244,7 +244,7 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 					h.SetEcn((Ipv4Header::EcnType)0x03);
 					p->AddHeader(h);
 					p->AddHeader(ppp);
-					Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(m_devices[inDev]);
+					Ptr<cnpNetDevice> device = DynamicCast<cnpNetDevice>(m_devices[inDev]);
 					device->SendCnp(p, ch);
 				}
 			}
@@ -261,7 +261,7 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 		uint8_t* buf = p->GetBuffer();
 		if (buf[PppHeader::GetStaticSize() + 9] == 0x11){ // udp packet
 			IntHeader *ih = (IntHeader*)&buf[PppHeader::GetStaticSize() + 20 + 8 + 6]; // ppp, ip, udp, SeqTs, INT
-			Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(m_devices[ifIndex]);
+			Ptr<cnpNetDevice> dev = DynamicCast<cnpNetDevice>(m_devices[ifIndex]);
 			if (m_ccMode == 3){ // HPCC
 				ih->PushHop(Simulator::Now().GetTimeStep(), m_txBytes[ifIndex], dev->GetQueue()->GetNBytesTotal(), dev->GetDataRate().GetBitRate());
 			}else if (m_ccMode == 10){ // HPCC-PINT

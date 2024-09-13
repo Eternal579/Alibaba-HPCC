@@ -21,7 +21,7 @@
 #define __STDC_LIMIT_MACROS 1
 #include <stdint.h>
 #include <stdio.h>
-#include "ns3/qbb-net-device.h"
+#include "ns3/cnp-net-device.h"
 #include "ns3/log.h"
 #include "ns3/boolean.h"
 #include "ns3/uinteger.h"
@@ -49,8 +49,8 @@
 
 #include <iostream>
 
-NS_LOG_COMPONENT_DEFINE("QbbNetDevice");
-// QbbNetDevice既表示网卡，也表示交换机
+NS_LOG_COMPONENT_DEFINE("cnpNetDevice");
+// cnpNetDevice既表示网卡，也表示交换机
 
 namespace ns3 {
 	
@@ -164,62 +164,62 @@ namespace ns3 {
 	}
 
 	/******************
-	 * QbbNetDevice
+	 * cnpNetDevice
 	 *****************/
-	NS_OBJECT_ENSURE_REGISTERED(QbbNetDevice);
+	NS_OBJECT_ENSURE_REGISTERED(cnpNetDevice);
 
 	TypeId
-		QbbNetDevice::GetTypeId(void)
+		cnpNetDevice::GetTypeId(void)
 	{
-		static TypeId tid = TypeId("ns3::QbbNetDevice")
+		static TypeId tid = TypeId("ns3::cnpNetDevice")
 			.SetParent<PointToPointNetDevice>()
-			.AddConstructor<QbbNetDevice>()
-			.AddAttribute("QbbEnabled",
+			.AddConstructor<cnpNetDevice>()
+			.AddAttribute("cnpEnabled",
 				"Enable the generation of PAUSE packet.",
 				BooleanValue(true),
-				MakeBooleanAccessor(&QbbNetDevice::m_qbbEnabled),
+				MakeBooleanAccessor(&cnpNetDevice::m_cnpEnabled),
 				MakeBooleanChecker())
 			.AddAttribute("QcnEnabled",
 				"Enable the generation of PAUSE packet.",
 				BooleanValue(false),
-				MakeBooleanAccessor(&QbbNetDevice::m_qcnEnabled),
+				MakeBooleanAccessor(&cnpNetDevice::m_qcnEnabled),
 				MakeBooleanChecker())
 			.AddAttribute("DynamicThreshold",
 				"Enable dynamic threshold.",
 				BooleanValue(false),
-				MakeBooleanAccessor(&QbbNetDevice::m_dynamicth),
+				MakeBooleanAccessor(&cnpNetDevice::m_dynamicth),
 				MakeBooleanChecker())
 			.AddAttribute("PauseTime",
 				"Number of microseconds to pause upon congestion",
 				UintegerValue(5),
-				MakeUintegerAccessor(&QbbNetDevice::m_pausetime),
+				MakeUintegerAccessor(&cnpNetDevice::m_pausetime),
 				MakeUintegerChecker<uint32_t>())
 			.AddAttribute ("TxBeQueue", 
 					"A queue to use as the transmit queue in the device.",
 					PointerValue (),
-					MakePointerAccessor (&QbbNetDevice::m_queue),
+					MakePointerAccessor (&cnpNetDevice::m_queue),
 					MakePointerChecker<Queue> ())
 			.AddAttribute ("RdmaEgressQueue", 
 					"A queue to use as the transmit queue in the device.",
 					PointerValue (),
-					MakePointerAccessor (&QbbNetDevice::m_rdmaEQ),
+					MakePointerAccessor (&cnpNetDevice::m_rdmaEQ),
 					MakePointerChecker<Object> ())
-			.AddTraceSource ("QbbEnqueue", "Enqueue a packet in the QbbNetDevice.",
-					MakeTraceSourceAccessor (&QbbNetDevice::m_traceEnqueue))
-			.AddTraceSource ("QbbDequeue", "Dequeue a packet in the QbbNetDevice.",
-					MakeTraceSourceAccessor (&QbbNetDevice::m_traceDequeue))
-			.AddTraceSource ("QbbDrop", "Drop a packet in the QbbNetDevice.",
-					MakeTraceSourceAccessor (&QbbNetDevice::m_traceDrop))
+			.AddTraceSource ("cnpEnqueue", "Enqueue a packet in the cnpNetDevice.",
+					MakeTraceSourceAccessor (&cnpNetDevice::m_traceEnqueue))
+			.AddTraceSource ("cnpDequeue", "Dequeue a packet in the cnpNetDevice.",
+					MakeTraceSourceAccessor (&cnpNetDevice::m_traceDequeue))
+			.AddTraceSource ("cnpDrop", "Drop a packet in the cnpNetDevice.",
+					MakeTraceSourceAccessor (&cnpNetDevice::m_traceDrop))
 			.AddTraceSource ("RdmaQpDequeue", "A qp dequeue a packet.",
-					MakeTraceSourceAccessor (&QbbNetDevice::m_traceQpDequeue))
-			.AddTraceSource ("QbbPfc", "get a PFC packet. 0: resume, 1: pause",
-					MakeTraceSourceAccessor (&QbbNetDevice::m_tracePfc))
+					MakeTraceSourceAccessor (&cnpNetDevice::m_traceQpDequeue))
+			.AddTraceSource ("cnpPfc", "get a PFC packet. 0: resume, 1: pause",
+					MakeTraceSourceAccessor (&cnpNetDevice::m_tracePfc))
 			;
 
 		return tid;
 	}
 
-	QbbNetDevice::QbbNetDevice()
+	cnpNetDevice::cnpNetDevice()
 	{
 		NS_LOG_FUNCTION(this);
 		m_ecn_source = new std::vector<ECNAccount>;
@@ -230,13 +230,13 @@ namespace ns3 {
 		m_rdmaEQ = CreateObject<RdmaEgressQueue>();
 	}
 
-	QbbNetDevice::~QbbNetDevice()
+	cnpNetDevice::~cnpNetDevice()
 	{
 		NS_LOG_FUNCTION(this);
 	}
 
 	void
-		QbbNetDevice::DoDispose()
+		cnpNetDevice::DoDispose()
 	{
 		NS_LOG_FUNCTION(this);
 
@@ -244,12 +244,12 @@ namespace ns3 {
 	}
 
 	void
-		QbbNetDevice::TransmitComplete(void)
+		cnpNetDevice::TransmitComplete(void)
 	{
 		NS_LOG_FUNCTION(this);
 		NS_ASSERT_MSG(m_txMachineState == BUSY, "Must be BUSY if transmitting");
 		m_txMachineState = READY;
-		NS_ASSERT_MSG(m_currentPkt != 0, "QbbNetDevice::TransmitComplete(): m_currentPkt zero");
+		NS_ASSERT_MSG(m_currentPkt != 0, "cnpNetDevice::TransmitComplete(): m_currentPkt zero");
 		m_phyTxEndTrace(m_currentPkt);
 		m_currentPkt = 0;
 		DequeueAndTransmit();
@@ -266,7 +266,7 @@ namespace ns3 {
  * @return 无返回值
  */
 	void
-		QbbNetDevice::DequeueAndTransmit(void)
+		cnpNetDevice::DequeueAndTransmit(void)
 	{
 		NS_LOG_FUNCTION(this);
 		if (!m_linkUp) return; // if link is down, return
@@ -300,13 +300,51 @@ namespace ns3 {
 					t = Min(qp->m_nextAvail, t);
 				}
 				if (m_nextSend.IsExpired() && t < Simulator::GetMaximumSimulationTime() && t > Simulator::Now()){
-					m_nextSend = Simulator::Schedule(t - Simulator::Now(), &QbbNetDevice::DequeueAndTransmit, this);
+					m_nextSend = Simulator::Schedule(t - Simulator::Now(), &cnpNetDevice::DequeueAndTransmit, this);
 				}
 			}
 			return;
 		}else{   //switch, doesn't care about qcn, just send
 			p = m_queue->DequeueRR(m_paused);		//this is round-robin
 			if (p != 0){
+				//检查p是否符合m_cnp_handler中的条件，如果符合则更新seq，并放到队尾
+				CustonHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
+				ch.getInt = 1;
+				p->PeekHeader(ch);
+				for(auto &cnp : m_cnp_handler){
+					if (cnp.port == ch.udp.sport && cnp.sip == ch.dip && cnp.qIndex == ch.udp.pg){
+                        if(!cnp.finished){
+							//第一个包第一次
+							if(cnp.first == 0){
+								cnp.first = ch.seq;
+								uint64_t bytesInQueue=m_queue->GetNBytes(cnp.qIndex);
+								cnp.delay = Time.FromInteger((Time.ToInteger(Simulator::Now(),NS)+bytesInQueue*80),NS);
+								cnp.n--;
+								//p重新入队
+								m_queue->Enqueue(p,ch.udp.pg);
+								return;
+							}
+							//第一个包其他次
+							else if(cnp.first == ch.seq){
+								if(cnp.n==0){
+									cnp.finished = true;
+									//现在时间+delay-55微秒
+									cnp.rectime = Time.FromInteger((Time.ToInteger(Simulator::Now(),US)+Time.ToInteger(cnp.rec_time,US)-55),US);
+								}
+								else{
+									cnp.n--;
+									m_queue->Enqueue(p,ch.udp.pg);
+									return;
+								}
+							}
+							//其他包
+							else{
+								m_queue->Enqueue(p,ch.udp.pg);
+								return;
+							}
+						}
+					}
+				}
 				m_snifferTrace(p);
 				m_promiscSnifferTrace(p);
 				Ipv4Header h;
@@ -318,6 +356,9 @@ namespace ns3 {
 				uint32_t qIndex = m_queue->GetLastQueue();
 				CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
 				packet->PeekHeader(ch);
+				if(ch.l3Prot == 0xFF){
+					ReceiveCnp(packet,ch);
+				}
 				if (qIndex == 0){//this is a pause or cnp, send it immediately!
 					m_node->SwitchNotifyDequeue(m_ifIndex, qIndex, p);
 					p->RemovePacketTag(t);
@@ -342,7 +383,7 @@ namespace ns3 {
 						t = Min(qp->m_nextAvail, t);
 					}
 					if (m_nextSend.IsExpired() && t < Simulator::GetMaximumSimulationTime() && t > Simulator::Now()){
-						m_nextSend = Simulator::Schedule(t - Simulator::Now(), &QbbNetDevice::DequeueAndTransmit, this);
+						m_nextSend = Simulator::Schedule(t - Simulator::Now(), &cnpNetDevice::DequeueAndTransmit, this);
 					}
 				}
 			}
@@ -350,8 +391,30 @@ namespace ns3 {
 		return;
 	}
 
+	void cnpNetDevice::ReceiveCnp(Ptr<Packet> p, CustomHeader &ch) {
+		uint16_t qIndex = ch.ack.pg;
+		uint16_t port = ch.ack.dport;
+		uint16_t sip = ch.sip;
+		//在m_cnp_handler中查
+		for (auto &cnp : m_cnp_handler){
+			if (cnp.port == port && cnp.sip == sip && cnp.qIndex == qIndex){
+				//满速结束
+				if(cnp.finished==true&&cnp.rec_time<=Simulator::Now()){
+					cnp.first=0;
+					cnp.finished=false;
+				}
+			}
+		}
+		CNP_Handler cnp;
+		cnp.qIndex = qIndex;
+		cnp.port = port;
+		cnp.sip = sip;
+		m_cnp_handler.push_back(cnp);
+		return;
+	}
+
 	void
-		QbbNetDevice::Resume(unsigned qIndex)
+		cnpNetDevice::Resume(unsigned qIndex)
 	{
 		NS_LOG_FUNCTION(this << qIndex);
 		NS_ASSERT_MSG(m_paused[qIndex], "Must be PAUSEd");
@@ -362,7 +425,7 @@ namespace ns3 {
 	}
 
 	void
-		QbbNetDevice::Receive(Ptr<Packet> packet)
+		cnpNetDevice::Receive(Ptr<Packet> packet)
 	{
 		NS_LOG_FUNCTION(this << packet);
 		if (!m_linkUp){
@@ -385,7 +448,7 @@ namespace ns3 {
 		ch.getInt = 1; // parse INT header
 		packet->PeekHeader(ch);
 		if (ch.l3Prot == 0xFE){ // PFC
-			if (!m_qbbEnabled) return;
+			if (!m_cnpEnabled) return;
 			unsigned qIndex = ch.pfc.qIndex;
 			if (ch.pfc.time > 0){
 				m_tracePfc(1); // 暂停
@@ -407,13 +470,13 @@ namespace ns3 {
 		return;
 	}
 
-	bool QbbNetDevice::Send(Ptr<Packet> packet, const Address &dest, uint16_t protocolNumber)
+	bool cnpNetDevice::Send(Ptr<Packet> packet, const Address &dest, uint16_t protocolNumber)
 	{
-		NS_ASSERT_MSG(false, "QbbNetDevice::Send not implemented yet\n");
+		NS_ASSERT_MSG(false, "cnpNetDevice::Send not implemented yet\n");
 		return false;
 	}
 
-	bool QbbNetDevice::SwitchSend (uint32_t qIndex, Ptr<Packet> packet, CustomHeader &ch){
+	bool cnpNetDevice::SwitchSend (uint32_t qIndex, Ptr<Packet> packet, CustomHeader &ch){
 		m_macTxTrace(packet);
 		m_traceEnqueue(packet, qIndex);
 		m_queue->Enqueue(packet, qIndex);
@@ -421,7 +484,7 @@ namespace ns3 {
 		return true;
 	}
 	//发送PFC
-	void QbbNetDevice::SendPfc(uint32_t qIndex, uint32_t type){
+	void cnpNetDevice::SendPfc(uint32_t qIndex, uint32_t type){
 		Ptr<Packet> p = Create<Packet>(0);
 		PauseHeader pauseh((type == 0 ? m_pausetime : 0), m_queue->GetNBytes(qIndex), qIndex);
 		p->AddHeader(pauseh);
@@ -438,7 +501,7 @@ namespace ns3 {
 		p->PeekHeader(ch);
 		SwitchSend(0, p, ch);
 	}
-	void QbbNetDevice::SendCnp(Ptr<Packet> p, CustomHeader &ch){
+	void cnpNetDevice::SendCnp(Ptr<Packet> p, CustomHeader &ch){
 		//发送CNP
 		//新建包，设置l3Prot为0xFF，设置sip,dport,qIndex
 		CnHeader seqh;
@@ -471,7 +534,7 @@ namespace ns3 {
 		//终端打印CNP
 	}
 	bool
-		QbbNetDevice::Attach(Ptr<QbbChannel> ch)
+		cnpNetDevice::Attach(Ptr<QbbChannel> ch)
 	{
 		NS_LOG_FUNCTION(this << &ch);
 		m_channel = ch;
@@ -481,7 +544,7 @@ namespace ns3 {
 	}
 
 	bool
-		QbbNetDevice::TransmitStart(Ptr<Packet> p)
+		cnpNetDevice::TransmitStart(Ptr<Packet> p)
 	{
 		NS_LOG_FUNCTION(this << p);
 		NS_LOG_LOGIC("UID is " << p->GetUid() << ")");
@@ -497,7 +560,7 @@ namespace ns3 {
 		Time txTime = Seconds(m_bps.CalculateTxTime(p->GetSize()));
 		Time txCompleteTime = txTime + m_tInterframeGap;
 		NS_LOG_LOGIC("Schedule TransmitCompleteEvent in " << txCompleteTime.GetSeconds() << "sec");
-		Simulator::Schedule(txCompleteTime, &QbbNetDevice::TransmitComplete, this);
+		Simulator::Schedule(txCompleteTime, &cnpNetDevice::TransmitComplete, this);
 
 		bool result = m_channel->TransmitStart(p, this, txTime);
 		if (result == false)
@@ -508,45 +571,45 @@ namespace ns3 {
 	}
 
 	Ptr<Channel>
-		QbbNetDevice::GetChannel(void) const
+		cnpNetDevice::GetChannel(void) const
 	{
 		return m_channel;
 	}
 
-   bool QbbNetDevice::IsQbb(void) const{
+   bool cnpNetDevice::Iscnp(void) const{
 	   return true;
    }
 
-   void QbbNetDevice::NewQp(Ptr<RdmaQueuePair> qp){
+   void cnpNetDevice::NewQp(Ptr<RdmaQueuePair> qp){
 	   qp->m_nextAvail = Simulator::Now();
 	   DequeueAndTransmit();
    }
-   void QbbNetDevice::ReassignedQp(Ptr<RdmaQueuePair> qp){
+   void cnpNetDevice::ReassignedQp(Ptr<RdmaQueuePair> qp){
 	   DequeueAndTransmit();
    }
-   void QbbNetDevice::TriggerTransmit(void){
+   void cnpNetDevice::TriggerTransmit(void){
 	   DequeueAndTransmit();
    }
 
-	void QbbNetDevice::SetQueue(Ptr<BEgressQueue> q){
+	void cnpNetDevice::SetQueue(Ptr<BEgressQueue> q){
 		NS_LOG_FUNCTION(this << q);
 		m_queue = q;
 	}
 
-	Ptr<BEgressQueue> QbbNetDevice::GetQueue(){
+	Ptr<BEgressQueue> cnpNetDevice::GetQueue(){
 		return m_queue;
 	}
 
-	Ptr<RdmaEgressQueue> QbbNetDevice::GetRdmaQueue(){
+	Ptr<RdmaEgressQueue> cnpNetDevice::GetRdmaQueue(){
 		return m_rdmaEQ;
 	}
 
-	void QbbNetDevice::RdmaEnqueueHighPrioQ(Ptr<Packet> p){
+	void cnpNetDevice::RdmaEnqueueHighPrioQ(Ptr<Packet> p){
 		m_traceEnqueue(p, 0);
 		m_rdmaEQ->EnqueueHighPrioQ(p);
 	}
 
-	void QbbNetDevice::TakeDown(){
+	void cnpNetDevice::TakeDown(){
 		// TODO: delete packets in the queue, set link down
 		if (m_node->GetNodeType() == 0){
 			// clean the high prio queue
@@ -568,11 +631,11 @@ namespace ns3 {
 		m_linkUp = false;
 	}
 
-	void QbbNetDevice::UpdateNextAvail(Time t){
+	void cnpNetDevice::UpdateNextAvail(Time t){
 		if (!m_nextSend.IsExpired() && t < m_nextSend.GetTs()){
 			Simulator::Cancel(m_nextSend);
 			Time delta = t < Simulator::Now() ? Time(0) : t - Simulator::Now();
-			m_nextSend = Simulator::Schedule(delta, &QbbNetDevice::DequeueAndTransmit, this);
+			m_nextSend = Simulator::Schedule(delta, &cnpNetDevice::DequeueAndTransmit, this);
 		}
 	}
 } // namespace ns3
