@@ -307,22 +307,19 @@ namespace ns3 {
 		}else{   //switch, doesn't care about qcn, just send
 			p = m_queue->DequeueRR(m_paused);		//this is round-robin
 			if (p != 0){
-									std::cout<<"received"<<std::endl;
 				//检查p是否符合m_cnp_handler中的条件，如果符合则更新seq，并放到队尾
 				CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
 				ch.getInt = 1;
 				p->PeekHeader(ch);
+				if(enable_themis){
 				CnpKey key(ch.udp.sport, ch.dip, ch.udp.pg);
-				std::cout<<"receive0"<<std::endl;
-				if(m_cnp_handler==NULL)
-				{
-					std::cout<<"cnp_handler is null"<<std::endl;
-				}
+				// if(m_cnp_handler==NULL)
+				// {
+				// 	std::cout<<"cnp_handler is null"<<std::endl;
+				// }
 				auto it = m_cnp_handler->find(key);
-				std::cout<<"receive1"<<std::endl;
 				if(it != m_cnp_handler->end()){
 					CNP_Handler cnp = it->second;
-					std::cout<<"cnp flow found"<<std::endl;
                         if(!cnp.finished){
 							//first=0表示第一个包,now-rec_time<=55微秒表示收到的时间在55微秒内
 							if(cnp.first == 0&&ns3::Simulator::Now()-cnp.rec_time<=ns3::MicroSeconds(55)){
@@ -332,7 +329,6 @@ namespace ns3 {
 								cnp.n--;
 								//p重新入队
 								m_queue->Enqueue(p,ch.udp.pg);
-								std::cout<<"first cnp"<<std::endl;
 								return;
 							}
 							//第一个包其他次
@@ -376,6 +372,7 @@ namespace ns3 {
 				// 	}
 				// 	}
 				// }
+				}
 				m_snifferTrace(p);
 				m_promiscSnifferTrace(p);
 				Ipv4Header h;
@@ -427,12 +424,6 @@ namespace ns3 {
 		uint32_t sip = ch.sip;
 		//在m_cnp_handler中查
 		CnpKey key(port, sip, qIndex);
-		if(port==10000&&sip==184563457&&qIndex==3){
-			//std::cout<<"nd1 "<<m_node->GetId()<<" cnp received sip= "<<sip<<" port= "<<port<<" qIndex= "<<qIndex<<std::endl;
-			// for(auto it = m_cnp_handler->begin();it!=m_cnp_handler->end();it++){
-			// 	std::cout<<"key1 "<<it->first.port<<" "<<it->first.sip<<" "<<it->first.qindex<<std::endl;
-			// }
-		}
 		auto it = m_cnp_handler->find(key);
 		if(it != m_cnp_handler->end()){
 			CNP_Handler cnp = it->second;
@@ -448,7 +439,7 @@ namespace ns3 {
 		cnp.finished = false;
 		cnp.n = 0;
 		cnp.rec_time = Simulator::Now();
-		m_cnp_handler->insert(std::pair<CnpKey, CNP_Handler>(key, cnp));
+		(*m_cnp_handler)[key] = cnp;
 		//m_cnp_handler->insert(std::pair<CnpKey, CNP_Handler>(key, cnp));
 		//输出cnp_handler中的所有key
 		//  if(m_node->GetId()==80){

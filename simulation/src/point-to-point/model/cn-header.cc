@@ -80,7 +80,7 @@ CnHeader::GetInstanceTypeId (void) const
 
 uint32_t CnHeader::GetSerializedSize (void)  const
 {
-  return 8;
+  return 5;
 }
 void CnHeader::Serialize (Buffer::Iterator start)  const
 {
