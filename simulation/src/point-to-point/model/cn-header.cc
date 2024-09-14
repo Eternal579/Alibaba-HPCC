@@ -80,7 +80,7 @@ CnHeader::GetInstanceTypeId (void) const
 
 uint32_t CnHeader::GetSerializedSize (void)  const
 {
-  return 5;
+  return 6;
 }
 void CnHeader::Serialize (Buffer::Iterator start)  const
 {
@@ -92,7 +92,7 @@ void CnHeader::Serialize (Buffer::Iterator start)  const
   //start.WriteU64 (lobyte);
   start.WriteU16(m_dport);
   start.WriteU16(m_sport);
-  start.WriteU8(m_pg);
+  start.WriteU16(m_pg);
   //NS_LOG_LOGIC("CN Seriealized as " << std::hex << hibyte << "+" << lobyte << std::dec);
 }
 
@@ -110,7 +110,7 @@ uint32_t CnHeader::Deserialize (Buffer::Iterator start)
 
   m_dport = start.ReadU16();
   m_sport = start.ReadU16();
-  m_pg = start.ReadU8();
+  m_pg = start.ReadU16();
 
   //m_qfb = static_cast<uint8_t>(lobyte>>24);
   //m_qIndex = lobyte & 0x00FFFFFFLLU;

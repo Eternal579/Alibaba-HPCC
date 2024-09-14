@@ -107,7 +107,7 @@ class CNP_Handler{
         if (sip != other.sip) return sip < other.sip;
         return qindex < other.qindex;
     }
-    CnpKey(uint16_t p, uint32_t s, uint8_t q):port(p), sip(s), qindex(q){}
+    CnpKey(uint16_t p, uint32_t s, uint16_t q):port(p), sip(s), qindex(q){}
   };
 
   static const uint32_t qCnt = 8;	// Number of queues/priorities used
