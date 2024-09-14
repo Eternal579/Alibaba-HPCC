@@ -124,6 +124,7 @@ void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 		p->PeekPacketTag(t);
 		uint32_t inDev = t.GetFlowId();
 		if (qIndex != 0){ //not highest priority
+			//交换机判断丢包逻辑
 			if (m_mmu->CheckIngressAdmission(inDev, qIndex, p->GetSize()) && m_mmu->CheckEgressAdmission(idx, qIndex, p->GetSize())){			// Admission control
 				m_mmu->UpdateIngressAdmission(inDev, qIndex, p->GetSize());
 				m_mmu->UpdateEgressAdmission(idx, qIndex, p->GetSize());

@@ -353,9 +353,9 @@ void QbbHelper::GetTraceFromPacket(TraceFormat &tr, Ptr<QbbNetDevice> dev, Ptr<c
 			tr.pfc.qIndex = hdr.pfc.qIndex;
 			break;
 		case 0xFF:
-			// tr.cnp.sport = hdr.cnp.sport;
-      // tr.cnp.dport = hdr.cnp.dport;
-      // tr.cnp.pg = hdr.cnp.pg;
+			tr.cnp.sport = hdr.cnp.sport;
+      tr.cnp.dport = hdr.cnp.dport;
+      tr.cnp.pg = hdr.cnp.pg;
 			break;
 		default:
 			break;

@@ -40,7 +40,7 @@
 #include "ns3/flow-id-tag.h"
 #include "ns3/qbb-header.h"
 #include "ns3/error-model.h"
-#include "cn-header.h"
+#include "ns3/cn-header.h"
 #include "ns3/ppp-header.h"
 #include "ns3/udp-header.h"
 #include "ns3/seq-ts-header.h"
@@ -439,7 +439,15 @@ namespace ns3 {
 		cnp.finished = false;
 		cnp.n = 0;
 		cnp.rec_time = Simulator::Now();
-		(*m_cnp_handler)[key] = cnp;
+		if(m_cnp_handler==NULL)
+		{
+			std::cout<<"cnp_handler is null"<<std::endl;
+		}
+		//如果map内部key数量少于5个，直接插入
+		if(m_cnp_handler->size()<5){
+			(*m_cnp_handler)[key] = cnp;
+		}
+		//(*m_cnp_handler)[key] = cnp;
 		//m_cnp_handler->insert(std::pair<CnpKey, CNP_Handler>(key, cnp));
 		//输出cnp_handler中的所有key
 		//  if(m_node->GetId()==80){
