@@ -307,22 +307,32 @@ namespace ns3 {
 		}else{   //switch, doesn't care about qcn, just send
 			p = m_queue->DequeueRR(m_paused);		//this is round-robin
 			if (p != 0){
+									std::cout<<"received"<<std::endl;
 				//检查p是否符合m_cnp_handler中的条件，如果符合则更新seq，并放到队尾
 				CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
 				ch.getInt = 1;
 				p->PeekHeader(ch);
-				for(auto &cnp : m_cnp_handler){
-					// CNP_Handler这个类的port指的是
-					if (cnp.port == ch.udp.sport && cnp.sip == ch.dip && cnp.qIndex == ch.udp.pg){
+				CnpKey key(ch.udp.sport, ch.dip, ch.udp.pg);
+				std::cout<<"receive0"<<std::endl;
+				if(m_cnp_handler==NULL)
+				{
+					std::cout<<"cnp_handler is null"<<std::endl;
+				}
+				auto it = m_cnp_handler->find(key);
+				std::cout<<"receive1"<<std::endl;
+				if(it != m_cnp_handler->end()){
+					CNP_Handler cnp = it->second;
+					std::cout<<"cnp flow found"<<std::endl;
                         if(!cnp.finished){
-							//第一个包第一次
-							if(cnp.first == 0){
+							//first=0表示第一个包,now-rec_time<=55微秒表示收到的时间在55微秒内
+							if(cnp.first == 0&&ns3::Simulator::Now()-cnp.rec_time<=ns3::MicroSeconds(55)){
 								cnp.first = ch.udp.seq;
 								uint64_t bytesInQueue=m_queue->GetNBytes(cnp.qIndex);
-								cnp.delay = ns3::NanoSeconds(bytesInQueue * 80 *cnp.n);
+								cnp.delay = ns3::NanoSeconds(bytesInQueue * 80);
 								cnp.n--;
 								//p重新入队
 								m_queue->Enqueue(p,ch.udp.pg);
+								std::cout<<"first cnp"<<std::endl;
 								return;
 							}
 							//第一个包其他次
@@ -330,13 +340,16 @@ namespace ns3 {
 								if(cnp.n==0){
 									cnp.finished = true;
 									//现在时间+delay-55微秒
+									//std::cout<<" cnp finished "<<cnp.delay.GetMicroSeconds()<<std::endl;
 									int64_t nowMicroSeconds = ns3::Simulator::Now().GetMicroSeconds();
-									int64_t recTimeMicroSeconds = cnp.rec_time.GetMicroSeconds();
-									int64_t newRecTimeMicroSeconds = nowMicroSeconds + recTimeMicroSeconds - 55;
-									cnp.rec_time = ns3::MicroSeconds(newRecTimeMicroSeconds);
+									int64_t recTimeMicroSeconds = cnp.delay.GetMicroSeconds();
+									int64_t newFinishTimeMicroSeconds = nowMicroSeconds + recTimeMicroSeconds - 55;
+									cnp.finish_time = ns3::MicroSeconds(newFinishTimeMicroSeconds);
 								}
 								else{
 									cnp.n--;
+									uint64_t bytesInQueue=m_queue->GetNBytes(cnp.qIndex);
+									cnp.delay += ns3::NanoSeconds(bytesInQueue * 80);
 									m_queue->Enqueue(p,ch.udp.pg);
 									return;
 								}
@@ -345,13 +358,30 @@ namespace ns3 {
 							else{
 								m_queue->Enqueue(p,ch.udp.pg);
 								return;
+								//resubmit结束时间
+
 							}
 						}
-					}
+						if(cnp.finished&&ns3::Simulator::Now()>=cnp.finish_time){
+							cnp.finished = false;
+						}
 				}
+				
+				// else{
+				// 	if(key.port==10000&&key.sip==184563457&&key.qindex==3&&m_node->GetId()==80){
+				// 	std::cout<<"cnp flow not found "<<" node "<<m_node->GetId() << "key "<<key.port<<" "<<key.sip<<" "<<key.qindex<<std::endl;
+				// 	//输出cnp_handler中的所有key
+				// 	for(auto it = m_cnp_handler->begin();it!=m_cnp_handler->end();it++){
+				// 		std::cout<<"key1 "<<it->first.port<<" "<<it->first.sip<<" "<<it->first.qindex<<std::endl;
+				// 	}
+				// 	}
+				// }
 				m_snifferTrace(p);
 				m_promiscSnifferTrace(p);
 				Ipv4Header h;
+				if (ch.l3Prot == 0xFF && enable_themis) {
+					ReceiveCnp(p, ch);
+				}
 				Ptr<Packet> packet = p->Copy();
 				uint16_t protocol = 0;
 				ProcessHeader(packet, protocol);
@@ -360,9 +390,6 @@ namespace ns3 {
 				uint32_t qIndex = m_queue->GetLastQueue();
 				CustomHeader ch2(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
 				packet->PeekHeader(ch2);
-				if (ch2.l3Prot == 0xFF && enable_themis) {
-					ReceiveCnp(packet, ch2);
-				}
 				if (qIndex == 0){//this is a pause or cnp, send it immediately!
 					m_node->SwitchNotifyDequeue(m_ifIndex, qIndex, p);
 					p->RemovePacketTag(t);
@@ -372,7 +399,6 @@ namespace ns3 {
 				}
 				//m_node转为switchnode
 				m_traceDequeue(p, qIndex);
-
 
 				TransmitStart(p);
 				return;
@@ -396,25 +422,39 @@ namespace ns3 {
 	}
 
 	void QbbNetDevice::ReceiveCnp(Ptr<Packet> p, CustomHeader &ch) {
-		uint16_t qIndex = ch.ack.pg;
-		uint16_t port = ch.ack.dport; // ns3中是使用ack打标记来模拟CNP包的，所以ack.dport就是cnp想要作用的发送端端口号
-		uint16_t sip = ch.sip;
+		uint16_t qIndex = ch.cnp.pg;
+		uint16_t port = ch.cnp.dport;
+		uint32_t sip = ch.sip;
 		//在m_cnp_handler中查
-		for (auto &cnp : m_cnp_handler){
-			if (cnp.port == port && cnp.sip == sip && cnp.qIndex == qIndex){
-				//满速结束
-				if(cnp.finished==true&&cnp.rec_time<=Simulator::Now()){
-					cnp.first=0;
-					cnp.finished=false;
-				}
-			}
+		CnpKey key(port, sip, qIndex);
+		if(port==10000&&sip==184563457&&qIndex==3){
+			//std::cout<<"nd1 "<<m_node->GetId()<<" cnp received sip= "<<sip<<" port= "<<port<<" qIndex= "<<qIndex<<std::endl;
+			// for(auto it = m_cnp_handler->begin();it!=m_cnp_handler->end();it++){
+			// 	std::cout<<"key1 "<<it->first.port<<" "<<it->first.sip<<" "<<it->first.qindex<<std::endl;
+			// }
 		}
-		CNP_Handler cnp;
+		auto it = m_cnp_handler->find(key);
+		if(it != m_cnp_handler->end()){
+			CNP_Handler cnp = it->second;
+			//更新接收时间
+			cnp.rec_time = Simulator::Now();
+			return;
+		}
+		CNP_Handler cnp = CNP_Handler();
 		cnp.qIndex = qIndex;
 		cnp.port = port;
 		cnp.sip = sip;
-		m_cnp_handler.push_back(cnp);
-
+		cnp.first = 0;
+		cnp.finished = false;
+		cnp.n = 0;
+		cnp.rec_time = Simulator::Now();
+		m_cnp_handler->insert(std::pair<CnpKey, CNP_Handler>(key, cnp));
+		//m_cnp_handler->insert(std::pair<CnpKey, CNP_Handler>(key, cnp));
+		//输出cnp_handler中的所有key
+		//  if(m_node->GetId()==80){
+		// 	std::cout<<"nd2 "<<m_node->GetId()<<" cnp received sip= "<<sip<<" port= "<<port<<" qIndex= "<<qIndex<<std::endl;
+		// 	std::cout << "m_cnp_handler size: " << m_cnp_handler->size() << std::endl;
+		//  }
 		return;
 	}
 
@@ -509,6 +549,8 @@ namespace ns3 {
 	void QbbNetDevice::SendCnp(Ptr<Packet> p, CustomHeader &ch){
 		//发送CNP
 		//新建包，设置l3Prot为0xFF，设置sip,dport,qIndex
+		//输出当前交换机的编号
+		//std::cout << "CNP sent from " << m_node->GetId() << " to " << ch.sip << " port " << ch.udp.dport << " pg "<< ch.udp.pg<< std::endl;
 		CnHeader seqh;
 		if(ch.udp.sport==100)return;
 		seqh.SetPG(ch.udp.pg);
@@ -523,7 +565,7 @@ namespace ns3 {
 		//Source为当前设备
 		//ipv4h.SetSource(m_node->GetObject<Ipv4>()->GetAddress(m_ifIndex, 0).GetLocal());
 		ipv4h.SetSource(Ipv4Address(ch.dip));
-		ipv4h.SetProtocol(0xFF); //ack=0xFC nack=0xFD cdn=0xFF
+		ipv4h.SetProtocol(0xFF); //ack=0xFC nack=0xFD cnp=0xFF
 		ipv4h.SetTtl(64);
 		ipv4h.SetPayloadSize(newp->GetSize());
 		ipv4h.SetIdentification(UniformVariable(0, 65536).GetValue());
@@ -534,7 +576,7 @@ namespace ns3 {
 		CustomHeader ch2(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
 		newp->PeekHeader(ch2);
 		//std::cout << "ch2 " << ch2.cnp.dport << std::endl;
-	
+		//std::cout << ch2.l3Prot << std::endl;
 		SwitchSend(0, newp, ch2);
 		//终端打印CNP
 	}

@@ -49,6 +49,7 @@ SwitchNode::SwitchNode(){
 	m_ecmpSeed = m_id;
 	m_node_type = 1;
 	m_mmu = CreateObject<SwitchMmu>();
+	m_cnp_handler = std::map<QbbNetDevice::CnpKey, QbbNetDevice::CNP_Handler>();
 	for (uint32_t i = 0; i < pCnt; i++)
 		for (uint32_t j = 0; j < pCnt; j++)
 			for (uint32_t k = 0; k < qCnt; k++)
@@ -192,34 +193,34 @@ bool SwitchNode::SwitchReceiveFromDevice(Ptr<NetDevice> device, Ptr<Packet> pack
 	SendToDev(packet, ch);
 	return true;
 }
-void SwitchNode::CheckAndSendCnp(uint32_t ifIndex, uint32_t qIndex, Ptr<Packet> p) {
-	FlowIdTag t;
-	p->PeekPacketTag(t);
-	if (qIndex != 0){
-		uint32_t inDev = t.GetFlowId();
-		if (m_ecnEnabled){
-			bool egressCongested = m_mmu->ShouldSendCN(ifIndex, qIndex);
-			if (egressCongested){
-				CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
-				p->PeekHeader(ch);
-				//终端输出流的信息
-				std::cout << "ECN sent from " << m_devices[ifIndex]->GetNode()->GetId() << " to " << m_devices[inDev]->GetNode()->GetId() << std::endl;
-				if(ch.GetIpv4EcnBits()==0){
-					CheckAndSendCnp(ifIndex, qIndex, p);
-					Ipv4Header h;
-					PppHeader ppp;
-					p->RemoveHeader(ppp);
-					p->RemoveHeader(h);
-					h.SetEcn((Ipv4Header::EcnType)0x03);
-					p->AddHeader(h);
-					p->AddHeader(ppp);
-					Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(m_devices[inDev]);
-					device->SendCnp(p, ch);
-				}
-			}
-		}
-	}
-}
+// void SwitchNode::CheckAndSendCnp(uint32_t ifIndex, uint32_t qIndex, Ptr<Packet> p) {
+// 	FlowIdTag t;
+// 	p->PeekPacketTag(t);
+// 	if (qIndex != 0){
+// 		uint32_t inDev = t.GetFlowId();
+// 		if (m_ecnEnabled){
+// 			bool egressCongested = m_mmu->ShouldSendCN(ifIndex, qIndex);
+// 			if (egressCongested){
+// 				CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
+// 				p->PeekHeader(ch);
+// 				//终端输出流的信息
+// 				std::cout << "ECN sent from " << m_devices[ifIndex]->GetNode()->GetId() << " to " << m_devices[inDev]->GetNode()->GetId() << std::endl;
+// 				if(ch.GetIpv4EcnBits()==0){
+// 					CheckAndSendCnp(ifIndex, qIndex, p);
+// 					Ipv4Header h;
+// 					PppHeader ppp;
+// 					p->RemoveHeader(ppp);
+// 					p->RemoveHeader(h);
+// 					h.SetEcn((Ipv4Header::EcnType)0x03);
+// 					p->AddHeader(h);
+// 					p->AddHeader(ppp);
+// 					Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(m_devices[inDev]);
+// 					device->SendCnp(p, ch);
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 //设置ECN标记的地方
 void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Packet> p){
 	FlowIdTag t;
@@ -246,6 +247,8 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 					p->AddHeader(ppp);
 					Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(m_devices[inDev]);
 					device->SendCnp(p, ch);
+					//输出交换机编号
+					//std::cout << "SwitchNode ID: " << m_id << std::endl;
 				}
 			}
 			

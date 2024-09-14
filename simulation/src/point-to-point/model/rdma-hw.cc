@@ -408,6 +408,7 @@ int RdmaHw::Receive(Ptr<Packet> p, CustomHeader &ch){
 	if (ch.l3Prot == 0x11){ // UDP
 		ReceiveUdp(p, ch);
 	}else if (ch.l3Prot == 0xFF){ // CNP
+		//std::cout << "CNP received\n";
 		ReceiveCnp(p, ch);
 	}else if (ch.l3Prot == 0xFD){ // NACK
 		ReceiveAck(p, ch);

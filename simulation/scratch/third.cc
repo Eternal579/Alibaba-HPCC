@@ -845,6 +845,9 @@ int main(int argc, char *argv[])
 				Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(sw->GetDevice(j));
 				if (i == 80 || i == 81) {
 					dev->enable_themis = true;
+					dev->m_cnp_handler = &sw->m_cnp_handler;
+					if(dev->m_cnp_handler == NULL)
+						std::cout << "m_cnp_handler is NULL\n";
 				}
 				// set ecn
 				uint64_t rate = dev->GetDataRate().GetBitRate();
@@ -870,9 +873,7 @@ int main(int argc, char *argv[])
 			sw->m_mmu->ConfigBufferSize(buffer_size* 1024 * 1024);
 			sw->m_mmu->node_id = sw->GetId();
 		}
-			
 	}
-
 	#if ENABLE_QP
 	FILE *fct_output = fopen(fct_output_file.c_str(), "w");
 	//
@@ -927,7 +928,6 @@ int main(int argc, char *argv[])
 	// setup routing
 	CalculateRoutes(n);
 	SetRoutingEntries();
-
 	//
 	// get BDP and delay
 	//
