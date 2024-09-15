@@ -309,84 +309,83 @@ namespace ns3 {
 			if (p != 0){
 				//检查p是否符合m_cnp_handler中的条件，如果符合则更新seq，并放到队尾
 				CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
-				ch.getInt = 1;
+				//ch.getInt = 1;
 				p->PeekHeader(ch);
 				if(enable_themis){
-				CnpKey key(ch.udp.sport, ch.dip, ch.udp.pg);
-				// if(m_cnp_handler==NULL)
-				// {
-				// 	std::cout<<"cnp_handler is null"<<std::endl;
-				// }
-				auto it = m_cnp_handler->find(key);
-				if(it != m_cnp_handler->end()){
-					CNP_Handler cnp = it->second;
-                        if(!cnp.finished){
-							//first=0表示第一个包,now-rec_time<=55微秒表示收到的时间在55微秒内
-							if(cnp.first == 0&&ns3::Simulator::Now()-cnp.rec_time<=ns3::MicroSeconds(55)){
-								cnp.first = ch.udp.seq;
-								uint64_t bytesInQueue=m_queue->GetNBytes(cnp.qIndex);
-								cnp.delay = ns3::NanoSeconds(bytesInQueue * 80);
-								cnp.n--;
-								//p重新入队
-								m_queue->Enqueue(p,ch.udp.pg);
-								return;
-							}
-							//第一个包其他次
-							else if(cnp.first == ch.udp.seq){
-								if(cnp.n==0){
-									cnp.finished = true;
-									//现在时间+delay-55微秒
-									//std::cout<<" cnp finished "<<cnp.delay.GetMicroSeconds()<<std::endl;
-									int64_t nowMicroSeconds = ns3::Simulator::Now().GetMicroSeconds();
-									int64_t recTimeMicroSeconds = cnp.delay.GetMicroSeconds();
-									int64_t newFinishTimeMicroSeconds = nowMicroSeconds + recTimeMicroSeconds - 55;
-									cnp.finish_time = ns3::MicroSeconds(newFinishTimeMicroSeconds);
-								}
-								else{
-									cnp.n--;
+					//printf("begin resubmit\n");
+					CnpKey key(ch.udp.sport, ch.dip, ch.udp.pg);
+					// if(m_cnp_handler==NULL)
+					// {
+					// 	std::cout<<"cnp_handler is null"<<std::endl;
+					// }
+					auto it = m_cnp_handler->find(key);
+
+					if(it != m_cnp_handler->end()){
+						//printf("find\n");
+						CNP_Handler cnp = it->second;
+							if(!cnp.finished){
+								//first=0表示第一个包,now-rec_time<=55微秒表示收到的时间在55微秒内
+								if(cnp.first == 0&&ns3::Simulator::Now()-cnp.rec_time<=ns3::MicroSeconds(55)){
+									cnp.first = ch.udp.seq;
 									uint64_t bytesInQueue=m_queue->GetNBytes(cnp.qIndex);
-									cnp.delay += ns3::NanoSeconds(bytesInQueue * 80);
+									cnp.delay = ns3::NanoSeconds(bytesInQueue * 80);
+									cnp.n--;
+									//p重新入队
 									m_queue->Enqueue(p,ch.udp.pg);
 									return;
 								}
-							}
-							//其他包
-							else{
-								m_queue->Enqueue(p,ch.udp.pg);
-								return;
-								//resubmit结束时间
+								//第一个包其他次
+								else if(cnp.first == ch.udp.seq){
+									if(cnp.n==0){
+										cnp.finished = true;
+										//现在时间+delay-55微秒
+										//std::cout<<" cnp finished "<<cnp.delay.GetMicroSeconds()<<std::endl;
+										int64_t nowMicroSeconds = ns3::Simulator::Now().GetMicroSeconds();
+										int64_t recTimeMicroSeconds = cnp.delay.GetMicroSeconds();
+										int64_t newFinishTimeMicroSeconds = nowMicroSeconds + recTimeMicroSeconds - 55;
+										cnp.finish_time = ns3::MicroSeconds(newFinishTimeMicroSeconds);
+									}
+									else{
+										cnp.n--;
+										uint64_t bytesInQueue=m_queue->GetNBytes(cnp.qIndex);
+										cnp.delay += ns3::NanoSeconds(bytesInQueue * 80);
+										m_queue->Enqueue(p,ch.udp.pg);
+										return;
+									}
+								}
+								//其他包
+								else{
+									m_queue->Enqueue(p,ch.udp.pg);
+									return;
+									//resubmit结束时间
 
+								}
 							}
-						}
 						if(cnp.finished&&ns3::Simulator::Now()>=cnp.finish_time){
 							cnp.finished = false;
 						}
-				}
-				
-				// else{
-				// 	if(key.port==10000&&key.sip==184563457&&key.qindex==3&&m_node->GetId()==80){
-				// 	std::cout<<"cnp flow not found "<<" node "<<m_node->GetId() << "key "<<key.port<<" "<<key.sip<<" "<<key.qindex<<std::endl;
-				// 	//输出cnp_handler中的所有key
-				// 	for(auto it = m_cnp_handler->begin();it!=m_cnp_handler->end();it++){
-				// 		std::cout<<"key1 "<<it->first.port<<" "<<it->first.sip<<" "<<it->first.qindex<<std::endl;
-				// 	}
-				// 	}
-				// }
+					}
+				//printf("finish resubmit\n");
 				}
 				m_snifferTrace(p);
 				m_promiscSnifferTrace(p);
 				Ipv4Header h;
 				if (ch.l3Prot == 0xFF && enable_themis) {
+					//printf("begin receive cnp\n");
 					ReceiveCnp(p, ch);
+					//printf("finish receive cnp\n");
 				}
 				Ptr<Packet> packet = p->Copy();
 				uint16_t protocol = 0;
 				ProcessHeader(packet, protocol);
 				packet->RemoveHeader(h);
+				//printf("1\n");
 				FlowIdTag t;
+				//printf("2\n");
 				uint32_t qIndex = m_queue->GetLastQueue();
-				CustomHeader ch2(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
-				packet->PeekHeader(ch2);
+				// CustomHeader ch2(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
+				// packet->PeekHeader(ch2);
+				//printf("3\n");
 				if (qIndex == 0){//this is a pause or cnp, send it immediately!
 					m_node->SwitchNotifyDequeue(m_ifIndex, qIndex, p);
 					p->RemovePacketTag(t);
@@ -396,7 +395,6 @@ namespace ns3 {
 				}
 				//m_node转为switchnode
 				m_traceDequeue(p, qIndex);
-
 				TransmitStart(p);
 				return;
 			}else{ //No queue can deliver any packet
@@ -444,9 +442,9 @@ namespace ns3 {
 			std::cout<<"cnp_handler is null"<<std::endl;
 		}
 		//如果map内部key数量少于5个，直接插入
-		if(m_cnp_handler->size()<5){
-			(*m_cnp_handler)[key] = cnp;
-		}
+		//std::cout<<"size "<<m_cnp_handler->size();
+		(*m_cnp_handler)[key] = cnp;
+		//std::cout<<" finish "<<std::endl;
 		//(*m_cnp_handler)[key] = cnp;
 		//m_cnp_handler->insert(std::pair<CnpKey, CNP_Handler>(key, cnp));
 		//输出cnp_handler中的所有key
