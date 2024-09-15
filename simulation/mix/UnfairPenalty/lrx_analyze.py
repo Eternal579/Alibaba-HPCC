@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-MODE = True # MODE为False表示单独分析intra或inter流量
+MODE = False # MODE为False表示单独分析intra或inter流量
 prefix = "inter"
 intra_ratio_sum = 0
 intra_flow_cnt = 0
