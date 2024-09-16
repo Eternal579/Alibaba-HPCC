@@ -34,7 +34,7 @@ def read_and_classify(file_path):
 
             if (ratio > 2):
                 flow_size = flow_size / 1000000
-                print(f"ratio = {ratio}, flow_size = {flow_size}MB")
+                # print(f"ratio = {ratio}, flow_size = {flow_size}MB")
                 if MODE == False:
                     ratio_and_flow_size_record.append(f"ratio = {ratio}, flow_size = {flow_size}MB")
 
