@@ -311,8 +311,13 @@ namespace ns3 {
 				CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
 				//ch.getInt = 1;
 				p->PeekHeader(ch);
-				if(enable_themis){
+				if(enable_themis&&m_queue->GetLastQueue()!=0){
 					//printf("begin resubmit\n");
+					if(ch.udp.pg!=m_queue->GetLastQueue())
+					{
+						std::cout<<ch.udp.pg<<"  "<<m_queue->GetLastQueue()<<std::endl;
+						std::cout<<ch.udp.sport<<"  "<<ch.dip<<"  "<<ch.udp.pg<<std::endl;
+					}
 					CnpKey key(ch.udp.sport, ch.dip, ch.udp.pg);
 					// if(m_cnp_handler==NULL)
 					// {
@@ -322,54 +327,66 @@ namespace ns3 {
 
 					if(it != m_cnp_handler->end()){
 						//printf("find\n");
-						CNP_Handler cnp = it->second;
-							if(!cnp.finished){
-								//first=0表示第一个包,now-rec_time<=55微秒表示收到的时间在55微秒内
-								if(cnp.first == 0&&ns3::Simulator::Now()-cnp.rec_time<=ns3::MicroSeconds(55)){
-									cnp.first = ch.udp.seq;
-									uint64_t bytesInQueue=m_queue->GetNBytes(cnp.qIndex);
-									cnp.delay = ns3::NanoSeconds(bytesInQueue * 80);
-									cnp.n--;
-									//p重新入队
-									m_queue->Enqueue(p,ch.udp.pg);
-									return;
+						CNP_Handler &cnp = it->second;
+						if(!cnp.finished){
+							//first=0表示第一个包,now-rec_time<=55微秒表示收到的时间在55微秒内
+							if(cnp.first == 0&&ns3::Simulator::Now()-cnp.rec_time<=ns3::MicroSeconds(55)){
+								//std::cout<<"first"<<ch.udp.sport<<" "<<" "<<ch.dip<<" "<<ch.udp.pg<<" "<<ns3::Simulator::Now()<<std::endl;
+								cnp.first = ch.udp.seq;
+								uint64_t bytesInQueue=m_queue->GetNBytes(cnp.qIndex);
+								cnp.delay = Seconds(m_bps.CalculateTxTime(bytesInQueue));
+								cnp.biggest = ch.udp.seq;
+								cnp.n--;
+								//p重新入队
+								m_queue->Enqueue(p,ch.udp.pg);
+								return;
+							}
+							//第一个包其他次
+							else if(cnp.first == ch.udp.seq){
+								if(cnp.n==0){
+									cnp.finished = true;
+									cnp.first = 0;
+									//std::cout<<"second"<<ch.udp.sport<<" "<<" "<<ch.dip<<" "<<ch.udp.pg<<" "<<ns3::Simulator::Now()<<std::endl;
+									//std::cout<<ns3::Simulator::Now()<<" "<<cnp.delay<<std::endl;
+									cnp.finish_time = ns3::Simulator::Now()+cnp.delay;
+									//std::cout<<"m_bps:"<<m_bps.GetBitRate ()<<std::endl;
 								}
-								//第一个包其他次
-								else if(cnp.first == ch.udp.seq){
-									if(cnp.n==0){
-										cnp.finished = true;
-										//现在时间+delay-55微秒
-										//std::cout<<" cnp finished "<<cnp.delay.GetMicroSeconds()<<std::endl;
-										int64_t nowMicroSeconds = ns3::Simulator::Now().GetMicroSeconds();
-										int64_t recTimeMicroSeconds = cnp.delay.GetMicroSeconds();
-										int64_t newFinishTimeMicroSeconds = nowMicroSeconds + recTimeMicroSeconds - 55;
-										cnp.finish_time = ns3::MicroSeconds(newFinishTimeMicroSeconds);
-									}
-									else{
-										cnp.n--;
-										uint64_t bytesInQueue=m_queue->GetNBytes(cnp.qIndex);
-										cnp.delay += ns3::NanoSeconds(bytesInQueue * 80);
-										m_queue->Enqueue(p,ch.udp.pg);
-										return;
-									}
-								}
-								//其他包
 								else{
+									cnp.n--;
+									uint64_t bytesInQueue=m_queue->GetNBytes(cnp.qIndex);
+									cnp.delay += Seconds(m_bps.CalculateTxTime(bytesInQueue));
 									m_queue->Enqueue(p,ch.udp.pg);
 									return;
-									//resubmit结束时间
-
 								}
 							}
+							//其他包
+							else{
+								if(ch.udp.seq>cnp.biggest)
+        						{
+            						cnp.biggest=ch.udp.seq;
+        						}
+								m_queue->Enqueue(p,ch.udp.pg);
+								return;
+								//resubmit结束时间
+
+							}
+						}
+						if(cnp.finished&&ch.udp.seq>cnp.biggest&&cnp.biggest){
+							m_queue->Enqueue(p,ch.udp.pg);
+							return;
+						}
 						if(cnp.finished&&ns3::Simulator::Now()>=cnp.finish_time){
 							cnp.finished = false;
 						}
+						if(ch.udp.seq==cnp.biggest)
+    					{
+        					cnp.biggest=0;
+    					}
 					}
 				//printf("finish resubmit\n");
 				}
 				m_snifferTrace(p);
 				m_promiscSnifferTrace(p);
-				Ipv4Header h;
 				if (ch.l3Prot == 0xFF && enable_themis) {
 					//printf("begin receive cnp\n");
 					ReceiveCnp(p, ch);
@@ -377,6 +394,7 @@ namespace ns3 {
 				}
 				Ptr<Packet> packet = p->Copy();
 				uint16_t protocol = 0;
+				Ipv4Header h;
 				ProcessHeader(packet, protocol);
 				packet->RemoveHeader(h);
 				//printf("1\n");
@@ -422,25 +440,27 @@ namespace ns3 {
 		uint32_t sip = ch.sip;
 		//在m_cnp_handler中查
 		CnpKey key(port, sip, qIndex);
+		if (m_cnp_handler == nullptr) {
+        	std::cerr << "m_cnp_handler is null" << std::endl;
+        	return;
+    	}
 		auto it = m_cnp_handler->find(key);
 		if(it != m_cnp_handler->end()){
-			CNP_Handler cnp = it->second;
+			CNP_Handler &cnp = it->second;
 			//更新接收时间
 			cnp.rec_time = Simulator::Now();
 			return;
 		}
-		CNP_Handler cnp = CNP_Handler();
+		CNP_Handler cnp;
 		cnp.qIndex = qIndex;
 		cnp.port = port;
 		cnp.sip = sip;
 		cnp.first = 0;
 		cnp.finished = false;
-		cnp.n = 0;
+		cnp.n = num;
+		//输出cnp.n
+		//std::cout<< cnp.n <<std::endl;
 		cnp.rec_time = Simulator::Now();
-		if(m_cnp_handler==NULL)
-		{
-			std::cout<<"cnp_handler is null"<<std::endl;
-		}
 		//如果map内部key数量少于5个，直接插入
 		//std::cout<<"size "<<m_cnp_handler->size();
 		(*m_cnp_handler)[key] = cnp;
