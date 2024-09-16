@@ -98,17 +98,35 @@ class CNP_Handler{
     }
   };
   struct CnpKey {
-    uint16_t port;
+    uint16_t sport;
+    uint16_t dport;
     uint32_t sip;
+    uint32_t dip;
     uint16_t qindex;
 
     // 重载小于运算符，用于 map 的键比较
     bool operator<(const CnpKey& other) const {
-        if (port != other.port) return port < other.port;
-        if (sip != other.sip) return sip < other.sip;
-        return qindex < other.qindex;
+      if (sip != other.sip) {
+        return sip < other.sip;
+      }
+      if (dip != other.dip) {
+        return dip < other.dip;
+      }
+      if (sport != other.sport) {
+        return sport < other.sport;
+      }
+      if (dport != other.dport) {
+        return dport < other.dport;
+      }
+      return qindex < other.qindex;
     }
-    CnpKey(uint16_t p, uint32_t s, uint16_t q):port(p), sip(s), qindex(q){}
+    CnpKey(uint16_t sport, uint16_t dport, uint32_t sip, uint32_t dip, uint16_t qindex) {
+      this->sport = sport;
+      this->dport = dport;
+      this->sip = sip;
+      this->dip = dip;
+      this->qindex = qindex;
+    }
   };
 
   static const uint32_t qCnt = 8;	// Number of queues/priorities used
