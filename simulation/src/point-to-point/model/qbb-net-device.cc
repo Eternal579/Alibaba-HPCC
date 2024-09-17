@@ -340,6 +340,7 @@ int finish_num=0;
 								cnp.first=ch.udp.seq;
 								cnp.biggest=ch.udp.seq;
 								cnp.delay = Seconds(m_bps.CalculateTxTime(m_queue->GetNBytes(ch.udp.pg)));
+								//std::cout<<"delay:              "<<cnp.delay<<std::endl;
 								cnp.n--;
 								m_queue->Enqueue(p,ch.udp.pg);
 								return;
@@ -357,6 +358,7 @@ int finish_num=0;
 								else{
 									cnp.finished=true;
 									cnp.sended=false;
+									//important
 									cnp.finish_time=Simulator::Now();
 									//printf("into stage 2 %d\n",first_num);
 								}
@@ -542,7 +544,7 @@ int finish_num=0;
 			if (ch.pfc.time > 0){
 				m_tracePfc(1); // 暂停
 				m_paused[qIndex] = true;
-				std::cout << "PFC received " << m_node->GetId()<< std::endl;
+				//std::cout << "PFC received " << m_node->GetId()<< std::endl;
 			}else{
 				m_tracePfc(0); // 继续
 				Resume(qIndex);
@@ -595,7 +597,7 @@ int finish_num=0;
 		AddHeader(p, 0x800);
 		CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
 		p->PeekHeader(ch);
-		std::cout << "pfc sent from " << m_node->GetId() << " to " << ch.sip << " port " << ch.udp.dport << " pg "<< ch.udp.pg<< std::endl;
+		//std::cout << "pfc sent from " << m_node->GetId() << " to " << ch.sip << " port " << ch.udp.dport << " pg "<< ch.udp.pg<< std::endl;
 		SwitchSend(0, p, ch);
 	}
 	void QbbNetDevice::SendCnp(Ptr<Packet> p, CustomHeader &ch){
