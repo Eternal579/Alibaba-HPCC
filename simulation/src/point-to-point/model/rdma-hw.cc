@@ -344,9 +344,12 @@ int RdmaHw::ReceiveCnp(Ptr<Packet> p, CustomHeader &ch){
 	//终端输出CNP
 	uint16_t qIndex = ch.cnp.pg;
 	uint16_t port = ch.cnp.dport;
+
 	Ptr<RdmaQueuePair> qp = GetQp(ch.sip, port, qIndex);
 	if (qp == NULL){
+		Ipv4Address ipv4_sip = Ipv4Address(ch.sip);
 		std::cout << "ERROR: " << "node:" << m_node->GetId()  << " CNP NIC cannot find the flow "<< ch.sip << ' ' << port << ' ' << qIndex << std::endl;
+		ipv4_sip.Print(std::cout);
 		return 0;
 	}
 	cnp_received_mlx(qp);

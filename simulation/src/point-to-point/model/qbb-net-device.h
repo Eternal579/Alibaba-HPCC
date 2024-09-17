@@ -77,24 +77,21 @@ class CNP_Handler{
 
     Time rec_time;//最后一次接到CNP的时间
     Time finish_time;//
-    uint16_t qIndex;
-    uint16_t port;
-    uint32_t sip;
     uint32_t first;//第一个序列号
-    uint32_t biggest;//第一个序列号
+    uint32_t biggest;//最大序列号
     uint32_t n;//需要resubmit n遍
     Time delay;//第一个包resubmit带来的延迟
     bool finished;// n次resubmit是否完成
+    bool sended;//是否发送过
     CNP_Handler(){
       rec_time = Time(0);
       finish_time = Time(0);
       delay = Time(0);
-      qIndex = 0;
-      port = 0;
-      sip = 0;
       first = 0;
+      biggest = 0;
       n = num;
       finished = false;
+      sended = true;
     }
   };
   struct CnpKey {

@@ -326,67 +326,99 @@ int finish_num=0;
 					// 	std::cout<<"cnp_handler is null"<<std::endl;
 					// }
 					auto it = m_cnp_handler->find(key);
-
-					if(it != m_cnp_handler->end()){
-						//printf("find\n");
+					if(it!=m_cnp_handler->end())
+					{
 						CNP_Handler &cnp = it->second;
-						if(!cnp.finished){
-							//first=0表示第一个包,now-rec_time<=55微秒表示收到的时间在55微秒内
-							if(cnp.first == 0&&ns3::Simulator::Now()-cnp.rec_time<=ns3::MicroSeconds(55)){
+						if(!cnp.finished&&cnp.sended)
+						{
+							//第一个包第一次
+							if(cnp.first==0)
+							{
+								//printf("1\n");
 								first_num++;
-								std::cout<<"first "<<first_num<<std::endl;
-								cnp.first = ch.udp.seq;
-								uint64_t bytesInQueue=m_queue->GetNBytes(cnp.qIndex);
-								cnp.delay = Seconds(m_bps.CalculateTxTime(bytesInQueue));
-								cnp.biggest = ch.udp.seq;
+								//printf("first_num:%d\n",first_num);
+								cnp.first=ch.udp.seq;
+								cnp.biggest=ch.udp.seq;
+								cnp.delay = Seconds(m_bps.CalculateTxTime(m_queue->GetNBytes(ch.udp.pg)));
 								cnp.n--;
-								//p重新入队
 								m_queue->Enqueue(p,ch.udp.pg);
 								return;
 							}
 							//第一个包其他次
-							else if(cnp.first == ch.udp.seq){
-								if(cnp.n==0){
-									cnp.finished = true;
-									cnp.first = 0;
-									//std::cout<<"second"<<ch.udp.sport<<" "<<" "<<ch.dip<<" "<<ch.udp.pg<<" "<<ns3::Simulator::Now()<<std::endl;
-									std::cout<<ns3::Simulator::Now()<<" "<<cnp.delay<<std::endl;
-									cnp.finish_time = ns3::Simulator::Now()+cnp.delay;
-									//std::cout<<"m_bps:"<<m_bps.GetBitRate ()<<std::endl;
-								}
-								else{
+							else if(cnp.first==ch.udp.seq)
+							{
+								//printf("%d n = %d",first_num,cnp.n);
+								if(cnp.n!=0){
 									cnp.n--;
-									uint64_t bytesInQueue=m_queue->GetNBytes(cnp.qIndex);
-									cnp.delay += Seconds(m_bps.CalculateTxTime(bytesInQueue));
+									cnp.delay+=Seconds(m_bps.CalculateTxTime(m_queue->GetNBytes(ch.udp.pg)));
 									m_queue->Enqueue(p,ch.udp.pg);
 									return;
 								}
+								else{
+									cnp.finished=true;
+									cnp.sended=false;
+									cnp.finish_time=Simulator::Now();
+									//printf("into stage 2 %d\n",first_num);
+								}
 							}
 							//其他包
-							else{
+							else {
 								if(ch.udp.seq>cnp.biggest)
-        						{
-            						cnp.biggest=ch.udp.seq;
-        						}
+								{
+									cnp.biggest=ch.udp.seq;
+								}
+								//printf("2\n");
 								m_queue->Enqueue(p,ch.udp.pg);
 								return;
-								//resubmit结束时间
-
 							}
 						}
-						if(cnp.finished&&ch.udp.seq>cnp.biggest&&cnp.biggest){
-							m_queue->Enqueue(p,ch.udp.pg);
-							return;
+						if(cnp.finished&&!cnp.sended)
+						{
+							//printf("3\n");
+							if(ns3::Simulator::Now()>=cnp.finish_time)
+							{
+								cnp.sended=true;
+								//printf("into stage 3 %d\n",first_num);
+							}
+							if(ch.udp.seq>cnp.biggest&&cnp.biggest)
+							{
+								cnp.biggest+=1000;
+								m_queue->Enqueue(p,ch.udp.pg);
+								return;
+							}
+							if(ch.udp.seq==cnp.biggest&&cnp.biggest)
+							{
+								finish_num++;
+								//printf("finish_num:%d\n",finish_num);
+								cnp.biggest=0;
+							}
 						}
-						if(cnp.finished&&ns3::Simulator::Now()>=cnp.finish_time){
-							cnp.finished = false;
+						if(cnp.finished&&cnp.sended)
+						{
+							if(ch.udp.seq>cnp.biggest&&cnp.biggest)
+							{
+
+								//printf("stage 3 resubmit%d %u %u\n",first_num,cnp.biggest,ch.udp.seq);
+								//std::cout<<"stage 3 resubmit "<<first_num<<" "<<cnp.biggest<<" "<<ch.udp.seq<<std::endl;
+								cnp.biggest+=1000;
+								//printf("biggest to %d\n",cnp.biggest);
+								m_queue->Enqueue(p,ch.udp.pg);
+								return;
+							}
+							if(ch.udp.seq==cnp.biggest&&cnp.biggest)
+							{
+								finish_num++;
+								//printf("finish_num:%d\n",finish_num);
+								cnp.biggest=0;
+							}
+							if(ns3::Simulator::Now()-cnp.rec_time<=ns3::MicroSeconds(55)&&cnp.biggest==0)
+							{
+								cnp.finished=false;
+								cnp.first=0;
+								cnp.n=num;
+								//printf("receive cnp again\n");
+							}
 						}
-						if(ch.udp.seq==cnp.biggest)
-    					{
-        					cnp.biggest=0;
-							finish_num++;
-							printf("finish!! %d\n",finish_num);
-    					}
 					}
 				//printf("finish resubmit\n");
 				}
@@ -452,11 +484,6 @@ int finish_num=0;
 			return;
 		}
 		CNP_Handler cnp;
-		cnp.qIndex = qIndex;
-		cnp.port = port;
-		cnp.sip = sip;
-		cnp.first = 0;
-		cnp.finished = false;
 		cnp.n = num;
 		//输出cnp.n
 		//std::cout<< cnp.n <<std::endl;
