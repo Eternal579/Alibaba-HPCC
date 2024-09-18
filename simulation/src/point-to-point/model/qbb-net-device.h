@@ -127,7 +127,7 @@ class CNP_Handler{
   };
 
   static const uint32_t qCnt = 8;	// Number of queues/priorities used
-  static const uint32_t num = 1;
+  static const uint32_t num = 2;
   static TypeId GetTypeId (void);
 
   QbbNetDevice ();

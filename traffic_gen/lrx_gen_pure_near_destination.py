@@ -88,21 +88,25 @@ if __name__ == "__main__":
 	while len(host_list) > 0:
 		t,src = host_list[0]
 		inter_t = int(poisson(avg_inter_arrival))
-		new_tuple = (src, t + inter_t)
-		dst = random.randint(0, nhost-1)
+		dst = random.randint(32, nhost-1)
+		
+		if inter_flow_cnt == inter_flow_cnt_limit and src <= 31:
+			src = random.randint(32, nhost-1)
+		
 		while (dst == src):
-			dst = random.randint(0, nhost-1)
+			dst = random.randint(32, nhost-1)
 
+		
 		# 不能再生成DC间的流量了
 		while ((inter_flow_cnt == inter_flow_cnt_limit) and (src <= 31 and dst >= 32 or src >= 32 and dst <= 31)):
-			dst = random.randint(0, nhost-1)
+			dst = random.randint(32, nhost-1)
 			while (dst == src):
-				dst = random.randint(0, nhost-1)
+				dst = random.randint(32, nhost-1)
 		# 不能再生成DC内部的流量了
 		while ((intra_flow_cnt == intra_flow_cnt_limit) and (src <= 31 and dst <= 31 or src >= 32 and dst >= 32)):
-			dst = random.randint(0, nhost-1)
+			dst = random.randint(32, nhost-1)
 			while (dst == src):
-				dst = random.randint(0, nhost-1)
+				dst = random.randint(32, nhost-1)
 
 		if (t + inter_t > time + base_t):
 			heapq.heappop(host_list)
@@ -119,6 +123,10 @@ if __name__ == "__main__":
 			n_flow += 1
 			if src == dst:
 				print("src == dst!!!")
+				
+			if dst < 32:
+				print("dst < 32!")
+
 			ofile.write("%d %d 3 100 %d %.9f\n"%(src, dst, size, t * 1e-9))
 			heapq.heapreplace(host_list, (t + inter_t, src))
 

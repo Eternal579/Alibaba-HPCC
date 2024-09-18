@@ -1,0 +1,22 @@
+{
+    "files.associations": {
+        "bit": "cpp",
+        "array": "cpp",
+        "fstream": "cpp",
+        "system_error": "cpp",
+        "*.tcc": "cpp",
+        "cctype": "cpp",
+        "clocale": "cpp",
+        "cmath": "cpp",
+        "complex": "cpp",
+        "csignal": "cpp",
+        "cstdio": "cpp",
+        "cstdlib": "cpp",
+        "cstring": "cpp",
+        "ctime": "cpp",
+        "cwchar": "cpp",
+        "cwctype": "cpp",
+        "memory_resource": "cpp",
+        "sstream": "cpp"
+    }
+}
