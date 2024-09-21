@@ -135,7 +135,7 @@ void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 					ackh.SetSport(ch.ack.dport);
 					ackh.SetDport(ch.ack.sport);
 					ackh.SetIntHeader(ch.ack.ih);
-					ackh.SetFlags(ch.ack.flags & (~(1<<qbbHeader::FLAG_CNP)));
+					ackh.RemoveCnp();
 					h.SetDestination(Ipv4Address(ch.sip));
 					h.SetSource(Ipv4Address(ch.dip));
 					h.SetProtocol(0xFD);
