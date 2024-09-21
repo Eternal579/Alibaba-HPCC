@@ -118,6 +118,44 @@ void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 		}else{
 			qIndex = (ch.l3Prot == 0x06 ? 1 : ch.udp.pg); // if TCP, put to queue 1
 		}
+		if((ch.l3Prot == 0xFD || ch.l3Prot == 0xFC)&&((ch.ack.flags >> qbbHeader::FLAG_CNP) & 1))
+		{
+			QbbNetDevice::CnpKey key(ch.udp.sport,ch.udp.dport,ch.sip,ch.dip,ch.udp.pg);
+			auto it = m_cnp_time.find(key);
+			if(it != m_cnp_time.end()){
+				Time now = Simulator::Now();
+				if(Simulator::Now()-it->second<MicroSeconds(50)){
+					m_cnp_time[key] = Simulator::Now();
+					//抹除ch.ack.flags中的CNP标记
+					qbbHeader ackh;
+					Ipv4Header h;
+					PppHeader ppp;
+					ackh.SetSeq(ch.ack.seq);
+					ackh.SetPG(ch.ack.pg);
+					ackh.SetSport(ch.ack.dport);
+					ackh.SetDport(ch.ack.sport);
+					ackh.SetIntHeader(ch.ack.ih);
+					ackh.SetFlags(ch.ack.flags & (~(1<<qbbHeader::FLAG_CNP)));
+					h.SetDestination(Ipv4Address(ch.sip));
+					h.SetSource(Ipv4Address(ch.dip));
+					h.SetProtocol(0xFD);
+					h.SetTtl(64);
+					h.SetPayloadSize(p->GetSize());
+					h.SetIdentification(ch.ack.seq);
+					p->RemoveHeader(ppp);
+					p->RemoveHeader(h);
+					p->RemoveHeader(ackh);
+					p->AddHeader(ackh);
+					p->AddHeader(h);
+					p->AddHeader(ppp);
+
+				}
+				else
+				{
+					m_cnp_time[key] = Simulator::Now();
+				}
+			}
+		}
 
 		// admission control
 		FlowIdTag t;
