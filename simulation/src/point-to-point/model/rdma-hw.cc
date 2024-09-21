@@ -316,7 +316,8 @@ int RdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch){
 		seqh.SetSport(ch.udp.dport);
 		seqh.SetDport(ch.udp.sport);
 		seqh.SetIntHeader(ch.udp.ih);
-
+		if (ecnbits)
+			seqh.SetCnp();
 		Ptr<Packet> newp = Create<Packet>(std::max(60-14-20-(int)seqh.GetSerializedSize(), 0));
 		newp->AddHeader(seqh);
 
@@ -344,7 +345,7 @@ int RdmaHw::ReceiveCnp(Ptr<Packet> p, CustomHeader &ch){
 	//终端输出CNP
 	uint16_t qIndex = ch.cnp.pg;
 	uint16_t port = ch.cnp.dport;
-
+	//printf("CNP received from %d to %d port %d pg %d\n", ch.sip, ch.dip, port, qIndex);
 	Ptr<RdmaQueuePair> qp = GetQp(ch.sip, port, qIndex);
 	if (qp == NULL){
 		Ipv4Address ipv4_sip = Ipv4Address(ch.sip);

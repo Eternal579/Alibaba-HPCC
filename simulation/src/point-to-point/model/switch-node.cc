@@ -223,6 +223,7 @@ bool SwitchNode::SwitchReceiveFromDevice(Ptr<NetDevice> device, Ptr<Packet> pack
 // 	}
 // }
 //设置ECN标记的地方
+int cnp_num=0;
 void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Packet> p){
 	FlowIdTag t;
 	p->PeekPacketTag(t);
@@ -232,30 +233,72 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 		m_mmu->RemoveFromEgressAdmission(ifIndex, qIndex, p->GetSize());
 		m_bytes[inDev][ifIndex][qIndex] -= p->GetSize();
 		if (m_ecnEnabled){
+			CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
+			p->PeekHeader(ch);
 			bool egressCongested = m_mmu->ShouldSendCN(ifIndex, qIndex);
+			// if (egressCongested){
+			// 	//终端输出流的信息
+			// 	//printf("1.1\n");
+			// 	if(ch.GetIpv4EcnBits()==0){
+			// 		Ipv4Header h;
+			// 		PppHeader ppp;
+			// 		p->RemoveHeader(ppp);
+			// 		p->RemoveHeader(h);
+			// 		//printf("1.2\n");
+			// 		h.SetEcn((Ipv4Header::EcnType)0x03);
+			// 		p->AddHeader(h);
+			// 		p->AddHeader(ppp);
+			// 		//printf("1.3\n");
+			// 		Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(m_devices[inDev]);
+			// 		device->SendCnp(p, ch);
+			// 		cnp_num++;
+			// 		printf("cnp_num: %d\n", cnp_num);
+			// 		//输出交换机编号
+			// 		//std::cout << "SwitchNode ID: " << m_id << std::endl;
+			// 		//printf("1.4\n");
+			// 	}
+			// }
 			if (egressCongested){
-				CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
-				p->PeekHeader(ch);
-				//终端输出流的信息
-				//printf("1.1\n");
-				if(ch.GetIpv4EcnBits()==0){
 					Ipv4Header h;
 					PppHeader ppp;
 					p->RemoveHeader(ppp);
 					p->RemoveHeader(h);
-					//printf("1.2\n");
 					h.SetEcn((Ipv4Header::EcnType)0x03);
 					p->AddHeader(h);
 					p->AddHeader(ppp);
-					//printf("1.3\n");
-					Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(m_devices[inDev]);
-					device->SendCnp(p, ch);
-					//输出交换机编号
-					//std::cout << "SwitchNode ID: " << m_id << std::endl;
-					//printf("1.4\n");
-				}
 			}
-			
+			if(ch.GetIpv4EcnBits()){
+				Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(m_devices[inDev]);
+					if(device->enable_themis){
+						Ipv4Header h;
+						PppHeader ppp;
+						p->RemoveHeader(ppp);
+						p->RemoveHeader(h);
+						//printf("1.2\n");
+						h.SetEcn((Ipv4Header::EcnType)0x00);
+						p->AddHeader(h);
+						p->AddHeader(ppp);
+						// QbbNetDevice::CnpKey key(ch.udp.sport,ch.udp.dport,ch.sip,ch.dip,ch.udp.pg);
+						// auto it = m_cnp_time.find(key);
+						// if(it!=m_cnp_time.end()){
+						// 	//如果在50微秒内，就不发
+						// 	if(Simulator::Now()-it->second>MicroSeconds(50)){
+						// 		device->SendCnp(p, ch);
+						// 		cnp_num++;
+						// 		printf("cnp_num: %d\n", cnp_num);
+						// 		m_cnp_time[key] = Simulator::Now();
+						// 	}
+						// }
+						// else{
+						// 	device->SendCnp(p, ch);
+						// 	cnp_num++;
+						// 	printf("cnp_num: %d\n", cnp_num);
+						// 	m_cnp_time[key] = Simulator::Now();
+						// }
+						device->SendCnp(p, ch);
+
+					}
+			}
 				// CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
 				// p->PeekHeader(ch);
 				// std::cout << " dport " << ch.cnp.dport<<std::endl;

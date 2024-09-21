@@ -843,7 +843,7 @@ int main(int argc, char *argv[])
 			// 对于交换机来说，其上的设备数为其连接的服务器有多少个
 			for (uint32_t j = 1; j < sw->GetNDevices(); j++){
 				Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(sw->GetDevice(j));
-				if (i == 80 || i == 81) {
+				if (i == 48 || i == 49) {
 					dev->enable_themis = true;
 					dev->m_cnp_handler = &sw->m_cnp_handler;
 					if(dev->m_cnp_handler == NULL)
@@ -872,6 +872,8 @@ int main(int argc, char *argv[])
 			// switch buffer大小单位为MB
 			sw->m_mmu->ConfigBufferSize(buffer_size* 1024 * 1024);
 			sw->m_mmu->node_id = sw->GetId();
+			// if(sw->GetId() == 48 || sw->GetId() == 49)
+			// 	sw->m_mmu->ConfigBufferSize(200 * 1024 * 1024);
 		}
 	}
 	#if ENABLE_QP
